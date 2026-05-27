@@ -60,7 +60,7 @@ export function subscribeToMessages(
   return onSnapshot(q, (snap) => {
     const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message));
     callback(msgs);
-  });
+  }, () => callback([]));
 }
 
 export async function sendMessage(
@@ -87,7 +87,7 @@ export function subscribeToUsers(callback: (users: ChatUser[]) => void) {
   return onSnapshot(collection(db, "users"), (snap) => {
     const users = snap.docs.map((d) => d.data() as ChatUser);
     callback(users);
-  });
+  }, () => callback([]));
 }
 
 export async function getUser(uid: string): Promise<ChatUser | null> {
@@ -117,7 +117,7 @@ export function subscribeToUserChats(
       };
     });
     callback(chats);
-  });
+  }, () => callback([]));
 }
 
 export async function markChatRead(chatId: string, uid: string) {
@@ -142,7 +142,7 @@ export function subscribeToTyping(
       .filter((d) => d.data().isTyping && d.id !== myUid)
       .map((d) => d.id);
     callback(typing);
-  });
+  }, () => callback([]));
 }
 
 export async function initiateCall(
@@ -168,7 +168,7 @@ export function subscribeToCall(
 ) {
   return onSnapshot(doc(db, "calls", chatId), (snap) => {
     callback(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
-  });
+  }, () => callback(null));
 }
 
 export async function updateCallStatus(chatId: string, status: string) {
@@ -208,6 +208,7 @@ export function subscribeToIceCandidates(
           callback(JSON.parse(change.doc.data().candidate));
         }
       });
-    }
+    },
+    () => {}
   );
 }
