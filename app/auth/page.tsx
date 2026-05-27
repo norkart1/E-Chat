@@ -29,6 +29,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
 
+  const [countryCode, setCountryCode] = useState("+91");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -110,14 +111,18 @@ export default function AuthPage() {
     setLoading(true);
     setError("");
     try {
+      const digits = phone.replace(/\D/g, "");
+      if (!digits) { setError("Please enter your phone number."); setLoading(false); return; }
+      const code = countryCode.startsWith("+") ? countryCode : `+${countryCode}`;
+      const fullPhone = `${code}${digits}`;
       if (!recaptchaRef.current) {
         recaptchaRef.current = setupRecaptcha("recaptcha-container");
       }
-      const result = await sendPhoneOTP(phone, recaptchaRef.current);
+      const result = await sendPhoneOTP(fullPhone, recaptchaRef.current);
       setConfirmation(result);
       setOtpSent(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to send OTP.");
+      setError(friendlyError(e));
       recaptchaRef.current = null;
     } finally {
       setLoading(false);
@@ -277,20 +282,29 @@ export default function AuthPage() {
             <div id="recaptcha-container" />
             {!otpSent ? (
               <>
-                <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+                <div className="flex gap-2">
                   <input
                     type="tel"
-                    placeholder="+1 234 567 8900"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                    className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    placeholder="+91"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="w-20 rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
+                  <div className="relative flex-1">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <input
+                      type="tel"
+                      placeholder="9876543210"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                      required
+                      className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-gray-400">Include country code, e.g. +1 for US, +44 for UK</p>
+                <p className="text-xs text-gray-400">Country code + number, e.g. +91 for India, +1 for US</p>
                 <button
                   type="submit"
                   disabled={loading}
