@@ -10,6 +10,10 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "E-Chat",
   description: "Real-time live chat with voice and video calls",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

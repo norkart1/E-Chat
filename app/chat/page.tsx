@@ -42,11 +42,7 @@ export default function ChatPage() {
     <div className="h-screen flex overflow-hidden bg-gray-100">
       <div className={`${sidebarOpen ? "flex" : "hidden"} md:flex flex-col w-full md:w-80 bg-white border-r border-gray-100 shadow-sm shrink-0`}>
         <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="E-Chat" className="w-8 h-8 object-contain" />
           <span className="font-bold text-gray-800 text-lg flex-1">E-Chat</span>
           <button
             onClick={handleLogout}

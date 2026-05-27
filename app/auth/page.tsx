@@ -126,10 +126,8 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
       <div className="bg-white rounded-3xl shadow-xl px-8 py-10 flex flex-col items-center gap-5 w-full max-w-sm">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg">
-          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
+        <div className="w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center overflow-hidden border border-gray-100">
+          <img src="/logo.png" alt="E-Chat logo" className="w-14 h-14 object-contain" />
         </div>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Welcome to E-Chat</h1>
