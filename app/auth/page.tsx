@@ -44,13 +44,40 @@ export default function AuthPage() {
     setInfo("");
   }, [mode]);
 
+  function friendlyError(e: unknown): string {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("unauthorized-domain")) {
+      const domain = window.location.hostname;
+      return `This domain (${domain}) is not authorized in Firebase. Go to Firebase Console → Authentication → Settings → Authorized domains and add: ${domain}`;
+    }
+    if (msg.includes("invalid-credential") || msg.includes("wrong-password") || msg.includes("user-not-found")) {
+      return "Incorrect email or password. Please try again.";
+    }
+    if (msg.includes("email-already-in-use")) {
+      return "An account with this email already exists. Please sign in instead.";
+    }
+    if (msg.includes("weak-password")) {
+      return "Password must be at least 6 characters.";
+    }
+    if (msg.includes("too-many-requests")) {
+      return "Too many attempts. Please wait a moment and try again.";
+    }
+    if (msg.includes("network-request-failed")) {
+      return "Network error. Check your connection and try again.";
+    }
+    if (msg.includes("popup-closed-by-user")) {
+      return "Sign-in window was closed. Please try again.";
+    }
+    return msg.replace("Firebase: ", "").replace(/\s*\(auth\/[\w-]+\)\.?/, "");
+  }
+
   async function handleGoogle() {
     setLoading(true);
     setError("");
     try {
       await signInWithGoogle();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Google sign-in failed.");
+      setError(friendlyError(e));
     } finally {
       setLoading(false);
     }
@@ -72,16 +99,7 @@ export default function AuthPage() {
         setInfo("Password reset email sent! Check your inbox.");
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Authentication failed.";
-      if (msg.includes("invalid-credential") || msg.includes("wrong-password") || msg.includes("user-not-found")) {
-        setError("Incorrect email or password. Please try again.");
-      } else if (msg.includes("email-already-in-use")) {
-        setError("An account with this email already exists. Please sign in.");
-      } else if (msg.includes("weak-password")) {
-        setError("Password must be at least 6 characters.");
-      } else {
-        setError(msg);
-      }
+      setError(friendlyError(e));
     } finally {
       setLoading(false);
     }
