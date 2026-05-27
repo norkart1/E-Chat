@@ -18,6 +18,7 @@ function formatTime(ts: { seconds: number } | null) {
 
 export default function MessageBubble({ message, isOwn }: Props) {
   const isImage = message.type === "image" || message.fileType?.startsWith("image/");
+  const isGif = message.type === "gif" || message.type === "sticker";
 
   return (
     <div className={`flex gap-2 items-end mb-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
@@ -29,12 +30,24 @@ export default function MessageBubble({ message, isOwn }: Props) {
           <span className="text-xs text-gray-500 ml-1">{message.senderName}</span>
         )}
         <div
-          className={`rounded-2xl px-4 py-2 text-sm shadow-sm ${
-            isOwn
-              ? "bg-indigo-600 text-white rounded-br-sm"
-              : "bg-white text-gray-800 rounded-bl-sm border border-gray-100"
+          className={`rounded-2xl text-sm shadow-sm overflow-hidden ${
+            isGif
+              ? "bg-transparent shadow-none p-0"
+              : isOwn
+              ? "bg-indigo-600 text-white rounded-br-sm px-4 py-2"
+              : "bg-white text-gray-800 rounded-bl-sm border border-gray-100 px-4 py-2"
           }`}
         >
+          {isGif && message.fileURL && (
+            <div className="rounded-2xl overflow-hidden max-w-[200px]">
+              <img
+                src={message.fileURL}
+                alt={message.fileName ?? "GIF"}
+                className="w-full rounded-2xl"
+                loading="lazy"
+              />
+            </div>
+          )}
           {message.type === "file" && !isImage && (
             <a
               href={message.fileURL}
@@ -59,7 +72,9 @@ export default function MessageBubble({ message, isOwn }: Props) {
               />
             </a>
           )}
-          {message.type === "text" && <p className="whitespace-pre-wrap break-words">{message.text}</p>}
+          {message.type === "text" && (
+            <p className="whitespace-pre-wrap break-words">{message.text}</p>
+          )}
         </div>
         <span className={`text-xs text-gray-400 ${isOwn ? "text-right" : "text-left"} ml-1`}>
           {formatTime(message.createdAt as { seconds: number } | null)}

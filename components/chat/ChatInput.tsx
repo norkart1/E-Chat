@@ -1,18 +1,21 @@
 "use client";
 import { useState, useRef, useCallback } from "react";
 import { uploadFile } from "@/lib/firebase/storage";
+import GiphyPicker from "./GiphyPicker";
 
 interface Props {
   chatId: string;
   onSend: (text: string) => void;
   onSendFile: (url: string, name: string, type: string) => void;
+  onSendGif: (url: string, title: string, type: "gif" | "sticker") => void;
   onTyping: (isTyping: boolean) => void;
 }
 
-export default function ChatInput({ chatId, onSend, onSendFile, onTyping }: Props) {
+export default function ChatInput({ chatId, onSend, onSendFile, onSendGif, onTyping }: Props) {
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [picker, setPicker] = useState<null | "gif" | "sticker">(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,8 +56,24 @@ export default function ChatInput({ chatId, onSend, onSendFile, onTyping }: Prop
     }
   };
 
+  function handleGifSelect(url: string, title: string) {
+    onSendGif(url, title, picker as "gif" | "sticker");
+    setPicker(null);
+  }
+
+  function togglePicker(mode: "gif" | "sticker") {
+    setPicker((prev) => (prev === mode ? null : mode));
+  }
+
   return (
-    <div className="border-t border-gray-100 bg-white px-4 py-3">
+    <div className="border-t border-gray-100 bg-white px-4 py-3 relative">
+      {picker && (
+        <GiphyPicker
+          mode={picker}
+          onSelect={handleGifSelect}
+          onClose={() => setPicker(null)}
+        />
+      )}
       {uploading && (
         <div className="mb-2">
           <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -66,7 +85,7 @@ export default function ChatInput({ chatId, onSend, onSendFile, onTyping }: Prop
           <p className="text-xs text-gray-400 mt-1">Uploading… {Math.round(uploadProgress)}%</p>
         </div>
       )}
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1.5">
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
@@ -78,6 +97,25 @@ export default function ChatInput({ chatId, onSend, onSendFile, onTyping }: Prop
           </svg>
         </button>
         <input ref={fileRef} type="file" className="hidden" onChange={handleFile} />
+
+        <button
+          onClick={() => togglePicker("gif")}
+          className={`p-2 rounded-full transition-colors shrink-0 text-sm font-bold ${picker === "gif" ? "bg-indigo-100 text-indigo-600" : "text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"}`}
+          title="Send GIF"
+        >
+          GIF
+        </button>
+
+        <button
+          onClick={() => togglePicker("sticker")}
+          className={`p-2 rounded-full transition-colors shrink-0 ${picker === "sticker" ? "bg-indigo-100 text-indigo-600" : "text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"}`}
+          title="Send Sticker"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+
         <textarea
           className="flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 max-h-32 min-h-[40px]"
           placeholder="Type a message…"

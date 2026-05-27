@@ -7,7 +7,6 @@ import {
   serverTimestamp,
   doc,
   getDoc,
-  getDocs,
   setDoc,
   updateDoc,
   where,
@@ -25,7 +24,7 @@ export interface Message {
   fileURL?: string;
   fileName?: string;
   fileType?: string;
-  type: "text" | "file" | "image";
+  type: "text" | "file" | "image" | "gif" | "sticker";
 }
 
 export interface ChatUser {
@@ -66,7 +65,7 @@ export async function sendMessage(
   await setDoc(
     doc(db, "chats", chatId),
     {
-      lastMessage: message.text || message.fileName || "",
+      lastMessage: message.text || message.fileName || "GIF",
       lastMessageAt: serverTimestamp(),
       participants: chatId.split("_"),
     },
@@ -88,7 +87,14 @@ export async function getUser(uid: string): Promise<ChatUser | null> {
 
 export function subscribeToUserChats(
   uid: string,
-  callback: (chats: { chatId: string; lastMessage: string; lastMessageAt: Timestamp | null; otherUid: string }[]) => void
+  callback: (
+    chats: {
+      chatId: string;
+      lastMessage: string;
+      lastMessageAt: Timestamp | null;
+      otherUid: string;
+    }[]
+  ) => void
 ) {
   const q = query(
     collection(db, "chats"),
@@ -97,7 +103,8 @@ export function subscribeToUserChats(
   return onSnapshot(q, (snap) => {
     const chats = snap.docs.map((d) => {
       const data = d.data();
-      const otherUid = data.participants.find((p: string) => p !== uid) ?? "";
+      const otherUid =
+        data.participants.find((p: string) => p !== uid) ?? "";
       return {
         chatId: d.id,
         lastMessage: data.lastMessage ?? "",
@@ -109,7 +116,11 @@ export function subscribeToUserChats(
   });
 }
 
-export async function setTyping(chatId: string, uid: string, isTyping: boolean) {
+export async function setTyping(
+  chatId: string,
+  uid: string,
+  isTyping: boolean
+) {
   await setDoc(
     doc(db, "chats", chatId, "typing", uid),
     { isTyping, uid },
@@ -141,6 +152,8 @@ export async function initiateCall(
     calleeId,
     type,
     status: "ringing",
+    offer: null,
+    answer: null,
     createdAt: serverTimestamp(),
   });
 }
@@ -150,23 +163,35 @@ export function subscribeToCall(
   callback: (data: Record<string, unknown> | null) => void
 ) {
   return onSnapshot(doc(db, "calls", chatId), (snap) => {
-    callback(snap.exists() ? snap.data() as Record<string, unknown> : null);
+    callback(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
   });
 }
 
 export async function updateCallStatus(chatId: string, status: string) {
-  await updateDoc(doc(db, "calls", chatId), { status });
+  try {
+    await updateDoc(doc(db, "calls", chatId), { status });
+  } catch {}
 }
 
-export async function saveOffer(chatId: string, offer: RTCSessionDescriptionInit) {
+export async function saveOffer(
+  chatId: string,
+  offer: RTCSessionDescriptionInit
+) {
   await updateDoc(doc(db, "calls", chatId), { offer: JSON.stringify(offer) });
 }
 
-export async function saveAnswer(chatId: string, answer: RTCSessionDescriptionInit) {
+export async function saveAnswer(
+  chatId: string,
+  answer: RTCSessionDescriptionInit
+) {
   await updateDoc(doc(db, "calls", chatId), { answer: JSON.stringify(answer) });
 }
 
-export async function addIceCandidate(chatId: string, role: "caller" | "callee", candidate: RTCIceCandidateInit) {
+export async function addIceCandidate(
+  chatId: string,
+  role: "caller" | "callee",
+  candidate: RTCIceCandidateInit
+) {
   await addDoc(collection(db, "calls", chatId, `${role}Candidates`), {
     candidate: JSON.stringify(candidate),
   });

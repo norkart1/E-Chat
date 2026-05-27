@@ -9,11 +9,9 @@ import {
   initiateCall,
   subscribeToCall,
   updateCallStatus,
-  getChatId,
   ChatUser,
   Message,
 } from "@/lib/firebase/firestore";
-import { uploadFile } from "@/lib/firebase/storage";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import CallModal from "./CallModal";
@@ -91,6 +89,21 @@ export default function ChatWindow({ currentUser, otherUser, chatId }: Props) {
     [chatId, currentUser]
   );
 
+  const handleSendGif = useCallback(
+    async (url: string, title: string, gifType: "gif" | "sticker") => {
+      await sendMessage(chatId, {
+        text: "",
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName ?? "User",
+        senderPhoto: currentUser.photoURL ?? "",
+        fileURL: url,
+        fileName: title,
+        type: gifType,
+      });
+    },
+    [chatId, currentUser]
+  );
+
   const handleTyping = useCallback(
     (isTyping: boolean) => {
       setTyping(chatId, currentUser.uid, isTyping);
@@ -119,7 +132,7 @@ export default function ChatWindow({ currentUser, otherUser, chatId }: Props) {
           <p className="font-semibold text-gray-800">{otherUser.displayName}</p>
           <p className="text-xs text-gray-400">{otherUser.online ? "Online" : "Offline"}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           <button
             onClick={() => startCall("audio")}
             className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-indigo-600 transition"
@@ -168,6 +181,7 @@ export default function ChatWindow({ currentUser, otherUser, chatId }: Props) {
         chatId={chatId}
         onSend={handleSend}
         onSendFile={handleSendFile}
+        onSendGif={handleSendGif}
         onTyping={handleTyping}
       />
 
