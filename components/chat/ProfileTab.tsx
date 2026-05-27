@@ -113,7 +113,7 @@ export default function ProfileTab({ currentUser, onLogout }: Props) {
 
       {/* Sign out confirmation modal */}
       {confirmLogout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 px-6" style={{pointerEvents: "all"}}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
             <p className="text-[17px] text-gray-900 font-semibold mb-1">Sign out of E-Chat?</p>
             <p className="text-[14px] text-gray-400 mb-6">You can sign back in at any time.</p>
