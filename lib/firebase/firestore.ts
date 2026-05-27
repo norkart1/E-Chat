@@ -11,6 +11,7 @@ import {
   updateDoc,
   where,
   Timestamp,
+  limit,
 } from "firebase/firestore";
 import { db } from "./config";
 
@@ -34,6 +35,14 @@ export interface ChatUser {
   photoURL: string;
   online: boolean;
   lastSeen: Timestamp | null;
+}
+
+export interface ChatPreview {
+  chatId: string;
+  lastMessage: string;
+  lastMessageAt: Timestamp | null;
+  otherUid: string;
+  unread: number;
 }
 
 export function getChatId(uid1: string, uid2: string) {
@@ -65,8 +74,9 @@ export async function sendMessage(
   await setDoc(
     doc(db, "chats", chatId),
     {
-      lastMessage: message.text || message.fileName || "GIF",
+      lastMessage: message.text || message.fileName || (message.type === "gif" ? "GIF" : message.type === "sticker" ? "Sticker" : "File"),
       lastMessageAt: serverTimestamp(),
+      lastSenderId: message.senderId,
       participants: chatId.split("_"),
     },
     { merge: true }
@@ -87,40 +97,34 @@ export async function getUser(uid: string): Promise<ChatUser | null> {
 
 export function subscribeToUserChats(
   uid: string,
-  callback: (
-    chats: {
-      chatId: string;
-      lastMessage: string;
-      lastMessageAt: Timestamp | null;
-      otherUid: string;
-    }[]
-  ) => void
+  callback: (chats: ChatPreview[]) => void
 ) {
   const q = query(
     collection(db, "chats"),
-    where("participants", "array-contains", uid)
+    where("participants", "array-contains", uid),
+    orderBy("lastMessageAt", "desc")
   );
   return onSnapshot(q, (snap) => {
-    const chats = snap.docs.map((d) => {
+    const chats: ChatPreview[] = snap.docs.map((d) => {
       const data = d.data();
-      const otherUid =
-        data.participants.find((p: string) => p !== uid) ?? "";
+      const otherUid = data.participants.find((p: string) => p !== uid) ?? "";
       return {
         chatId: d.id,
         lastMessage: data.lastMessage ?? "",
         lastMessageAt: data.lastMessageAt ?? null,
         otherUid,
+        unread: data.lastSenderId && data.lastSenderId !== uid && !data[`read_${uid}`] ? 1 : 0,
       };
     });
     callback(chats);
   });
 }
 
-export async function setTyping(
-  chatId: string,
-  uid: string,
-  isTyping: boolean
-) {
+export async function markChatRead(chatId: string, uid: string) {
+  await setDoc(doc(db, "chats", chatId), { [`read_${uid}`]: true }, { merge: true });
+}
+
+export async function setTyping(chatId: string, uid: string, isTyping: boolean) {
   await setDoc(
     doc(db, "chats", chatId, "typing", uid),
     { isTyping, uid },
@@ -173,17 +177,11 @@ export async function updateCallStatus(chatId: string, status: string) {
   } catch {}
 }
 
-export async function saveOffer(
-  chatId: string,
-  offer: RTCSessionDescriptionInit
-) {
+export async function saveOffer(chatId: string, offer: RTCSessionDescriptionInit) {
   await updateDoc(doc(db, "calls", chatId), { offer: JSON.stringify(offer) });
 }
 
-export async function saveAnswer(
-  chatId: string,
-  answer: RTCSessionDescriptionInit
-) {
+export async function saveAnswer(chatId: string, answer: RTCSessionDescriptionInit) {
   await updateDoc(doc(db, "calls", chatId), { answer: JSON.stringify(answer) });
 }
 
