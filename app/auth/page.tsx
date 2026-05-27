@@ -1,20 +1,16 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   signInWithGoogle,
   signInWithEmail,
   signUpWithEmail,
   resetPassword,
-  setupRecaptcha,
-  sendPhoneOTP,
-  verifyPhoneOTP,
 } from "@/lib/firebase/auth";
 import { useAuth } from "@/lib/hooks/useAuth";
-import type { ConfirmationResult, RecaptchaVerifier } from "firebase/auth";
 import Spinner from "@/components/ui/Spinner";
 
-type Mode = "signin" | "signup" | "reset" | "phone";
+type Mode = "signin" | "signup" | "reset";
 
 export default function AuthPage() {
   const { user } = useAuth();
@@ -28,13 +24,6 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-
-  const [countryCode, setCountryCode] = useState("+91");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
-  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
     if (user) router.replace("/chat");
@@ -71,18 +60,6 @@ export default function AuthPage() {
     }
     if (full.includes("popup-closed-by-user")) {
       return "Sign-in window was closed. Please try again.";
-    }
-    if (full.includes("invalid-phone-number") || full.includes("invalid-format")) {
-      return "Invalid phone number. Make sure you include the country code (e.g. +91).";
-    }
-    if (full.includes("sms-not-sent") || full.includes("region") || full.includes("unsupported-first-factor")) {
-      return "SMS could not be sent to this number. Make sure phone sign-in is fully enabled in Firebase and your region is allowed.";
-    }
-    if (full.includes("billing-not-enabled")) {
-      return "Phone sign-in requires Firebase billing to be enabled. Please upgrade your Firebase project to the Blaze plan.";
-    }
-    if (full.includes("captcha-check-failed") || full.includes("recaptcha")) {
-      return "Security check failed. Please refresh the page and try again.";
     }
     if (full.includes("operation-not-allowed")) {
       return "This sign-in method is not enabled. Please contact the app developer.";
@@ -125,54 +102,15 @@ export default function AuthPage() {
     }
   }
 
-  async function handleSendOTP(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const digits = phone.replace(/\D/g, "");
-      if (!digits) { setError("Please enter your phone number."); setLoading(false); return; }
-      const code = countryCode.startsWith("+") ? countryCode : `+${countryCode}`;
-      const fullPhone = `${code}${digits}`;
-      if (!recaptchaRef.current) {
-        recaptchaRef.current = setupRecaptcha("recaptcha-container");
-      }
-      const result = await sendPhoneOTP(fullPhone, recaptchaRef.current);
-      setConfirmation(result);
-      setOtpSent(true);
-    } catch (e: unknown) {
-      setError(friendlyError(e));
-      recaptchaRef.current = null;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerifyOTP(e: React.FormEvent) {
-    e.preventDefault();
-    if (!confirmation) return;
-    setLoading(true);
-    setError("");
-    try {
-      await verifyPhoneOTP(confirmation, otp);
-    } catch {
-      setError("Invalid code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const heading =
     mode === "signin" ? "Sign in to E-Chat"
     : mode === "signup" ? "Create your account"
-    : mode === "reset" ? "Reset your password"
-    : "Sign in with phone";
+    : "Reset your password";
 
   const subheading =
     mode === "signin" ? "Welcome back! Enter your details to continue."
     : mode === "signup" ? "Start chatting with people in seconds."
-    : mode === "reset" ? "We'll send a reset link to your email."
-    : "We'll send a one-time code to verify your number.";
+    : "We'll send a reset link to your email.";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
@@ -205,168 +143,93 @@ export default function AuthPage() {
         )}
 
         {/* ── Email / Password form ── */}
-        {(mode === "signin" || mode === "signup" || mode === "reset") && (
-          <form onSubmit={handleEmailSubmit} className="w-full flex flex-col gap-3">
-            {mode === "signup" && (
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-              </div>
-            )}
-
+        <form onSubmit={handleEmailSubmit} className="w-full flex flex-col gap-3">
+          {mode === "signup" && (
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
-                autoComplete="email"
                 className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
+          )}
 
-            {mode !== "reset" && (
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <input
-                  type={showPass ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                  className="w-full rounded-xl border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPass ? (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            )}
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
 
-            {mode === "signin" && (
-              <div className="flex justify-end -mt-1">
-                <button
-                  type="button"
-                  onClick={() => setMode("reset")}
-                  className="text-xs text-indigo-600 hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            )}
+          {mode !== "reset" && (
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <input
+                type={showPass ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                className="w-full rounded-xl border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPass ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
-            >
-              {loading && <Spinner size={18} />}
-              {mode === "signin" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Email"}
-            </button>
-          </form>
-        )}
+          {mode === "signin" && (
+            <div className="flex justify-end -mt-1">
+              <button
+                type="button"
+                onClick={() => setMode("reset")}
+                className="text-xs text-indigo-600 hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
-        {/* ── Phone OTP form ── */}
-        {mode === "phone" && (
-          <form onSubmit={otpSent ? handleVerifyOTP : handleSendOTP} className="w-full flex flex-col gap-3">
-            <div id="recaptcha-container" />
-            {!otpSent ? (
-              <>
-                <div className="flex gap-2">
-                  <input
-                    type="tel"
-                    placeholder="+91"
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-20 rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                  <div className="relative flex-1">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <input
-                      type="tel"
-                      placeholder="9876543210"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                      required
-                      className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400">Country code + number, e.g. +91 for India, +1 for US</p>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {loading && <Spinner size={18} />}
-                  Send Code
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-gray-600 text-center bg-gray-50 rounded-xl px-4 py-3">
-                  Code sent to <span className="font-semibold text-gray-800">{phone}</span>
-                </p>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000000"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  required
-                  maxLength={6}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-center tracking-[0.5em] text-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
-                <button
-                  type="submit"
-                  disabled={loading || otp.length < 6}
-                  className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-60 flex items-center justify-center gap-2"
-                >
-                  {loading && <Spinner size={18} />}
-                  Verify & Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setOtpSent(false); setOtp(""); recaptchaRef.current = null; }}
-                  className="text-sm text-indigo-600 hover:underline text-center"
-                >
-                  Use a different number
-                </button>
-              </>
-            )}
-          </form>
-        )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
+          >
+            {loading && <Spinner size={18} />}
+            {mode === "signin" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Email"}
+          </button>
+        </form>
 
         {/* ── Divider + Google ── */}
         {mode !== "reset" && (
@@ -377,38 +240,21 @@ export default function AuthPage() {
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            <div className="flex gap-2 w-full">
-              <button
-                onClick={handleGoogle}
-                disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:shadow-sm transition-all disabled:opacity-60"
-              >
-                {loading ? <Spinner size={16} /> : (
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                )}
-                Google
-              </button>
-
-              <button
-                onClick={() => setMode("phone")}
-                disabled={loading}
-                className={`flex-1 flex items-center justify-center gap-2 border rounded-xl px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-60 ${
-                  mode === "phone"
-                    ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:shadow-sm"
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            <button
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:shadow-sm transition-all disabled:opacity-60"
+            >
+              {loading ? <Spinner size={16} /> : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Phone
-              </button>
-            </div>
+              )}
+              Continue with Google
+            </button>
           </>
         )}
 
@@ -430,7 +276,7 @@ export default function AuthPage() {
               </button>
             </>
           )}
-          {(mode === "reset" || mode === "phone") && (
+          {mode === "reset" && (
             <button onClick={() => setMode("signin")} className="text-indigo-600 font-semibold hover:underline flex items-center justify-center gap-1 mx-auto">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
