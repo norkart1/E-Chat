@@ -46,30 +46,49 @@ export default function AuthPage() {
   }, [mode]);
 
   function friendlyError(e: unknown): string {
+    const code = (e as { code?: string })?.code ?? "";
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("unauthorized-domain")) {
+    const full = `${code} ${msg}`.toLowerCase();
+
+    if (full.includes("unauthorized-domain")) {
       const domain = window.location.hostname;
       return `This domain (${domain}) is not authorized in Firebase. Go to Firebase Console → Authentication → Settings → Authorized domains and add: ${domain}`;
     }
-    if (msg.includes("invalid-credential") || msg.includes("wrong-password") || msg.includes("user-not-found")) {
+    if (full.includes("invalid-credential") || full.includes("wrong-password") || full.includes("user-not-found")) {
       return "Incorrect email or password. Please try again.";
     }
-    if (msg.includes("email-already-in-use")) {
+    if (full.includes("email-already-in-use")) {
       return "An account with this email already exists. Please sign in instead.";
     }
-    if (msg.includes("weak-password")) {
+    if (full.includes("weak-password")) {
       return "Password must be at least 6 characters.";
     }
-    if (msg.includes("too-many-requests")) {
+    if (full.includes("too-many-requests") || full.includes("quota-exceeded")) {
       return "Too many attempts. Please wait a moment and try again.";
     }
-    if (msg.includes("network-request-failed")) {
+    if (full.includes("network-request-failed")) {
       return "Network error. Check your connection and try again.";
     }
-    if (msg.includes("popup-closed-by-user")) {
+    if (full.includes("popup-closed-by-user")) {
       return "Sign-in window was closed. Please try again.";
     }
-    return msg.replace("Firebase: ", "").replace(/\s*\(auth\/[\w-]+\)\.?/, "");
+    if (full.includes("invalid-phone-number") || full.includes("invalid-format")) {
+      return "Invalid phone number. Make sure you include the country code (e.g. +91).";
+    }
+    if (full.includes("sms-not-sent") || full.includes("region") || full.includes("unsupported-first-factor")) {
+      return "SMS could not be sent to this number. Make sure phone sign-in is fully enabled in Firebase and your region is allowed.";
+    }
+    if (full.includes("billing-not-enabled")) {
+      return "Phone sign-in requires Firebase billing to be enabled. Please upgrade your Firebase project to the Blaze plan.";
+    }
+    if (full.includes("captcha-check-failed") || full.includes("recaptcha")) {
+      return "Security check failed. Please refresh the page and try again.";
+    }
+    if (full.includes("operation-not-allowed")) {
+      return "This sign-in method is not enabled. Please contact the app developer.";
+    }
+    const cleaned = msg.replace("Firebase: ", "").replace(/\s*\(auth\/[\w-]+\)\.?/g, "").trim();
+    return cleaned || "Something went wrong. Please try again.";
   }
 
   async function handleGoogle() {
