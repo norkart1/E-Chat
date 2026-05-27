@@ -9,6 +9,10 @@ import {
   initiateCall,
   subscribeToCall,
   updateCallStatus,
+  markChatRead,
+  subscribeToChatDoc,
+  deleteMessage,
+  editMessage,
   ChatUser,
   Message,
 } from "@/lib/firebase/firestore";
@@ -30,12 +34,28 @@ export default function ChatWindow({ currentUser, otherUser, chatId, onBack }: P
   const [callData, setCallData] = useState<Record<string, unknown> | null>(null);
   const [inCall, setInCall] = useState(false);
   const [callType, setCallType] = useState<"audio" | "video">("audio");
+  const [otherUserLastRead, setOtherUserLastRead] = useState<number>(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsub = subscribeToMessages(chatId, setMessages);
     return unsub;
   }, [chatId]);
+
+  useEffect(() => {
+    markChatRead(chatId, currentUser.uid).catch(() => {});
+  }, [chatId, currentUser.uid, messages]);
+
+  useEffect(() => {
+    const unsub = subscribeToChatDoc(chatId, (data) => {
+      if (data) {
+        const key = `lastRead_${otherUser.uid}`;
+        const ts = data[key] as { seconds: number } | null;
+        if (ts?.seconds) setOtherUserLastRead(ts.seconds * 1000);
+      }
+    });
+    return unsub;
+  }, [chatId, otherUser.uid]);
 
   useEffect(() => {
     const unsub = subscribeToTyping(chatId, currentUser.uid, setTypingUsers);
@@ -110,6 +130,20 @@ export default function ChatWindow({ currentUser, otherUser, chatId, onBack }: P
     [chatId, currentUser.uid]
   );
 
+  const handleDelete = useCallback(
+    async (messageId: string) => {
+      await deleteMessage(chatId, messageId);
+    },
+    [chatId]
+  );
+
+  const handleEdit = useCallback(
+    async (messageId: string, newText: string) => {
+      await editMessage(chatId, messageId, newText);
+    },
+    [chatId]
+  );
+
   async function startCall(type: "audio" | "video") {
     setCallType(type);
     await initiateCall(chatId, currentUser.uid, otherUser.uid, type);
@@ -143,27 +177,14 @@ export default function ChatWindow({ currentUser, otherUser, chatId, onBack }: P
           <p className="text-xs text-white/70">{otherUser.online ? "online" : "last seen recently"}</p>
         </div>
         <div className="flex gap-1">
-          <button
-            onClick={() => startCall("video")}
-            className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition"
-            title="Video call"
-          >
+          <button onClick={() => startCall("video")} className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition" title="Video call">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </button>
-          <button
-            onClick={() => startCall("audio")}
-            className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition"
-            title="Voice call"
-          >
+          <button onClick={() => startCall("audio")} className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition" title="Voice call">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-            </svg>
-          </button>
-          <button className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition" title="More">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
             </svg>
           </button>
         </div>
@@ -172,7 +193,7 @@ export default function ChatWindow({ currentUser, otherUser, chatId, onBack }: P
       {/* Messages */}
       <div
         className="flex-1 overflow-y-auto py-3"
-        style={{ background: "#EFEAE2 url(\"data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3C/svg%3E\")" }}
+        style={{ background: "#EFEAE2" }}
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
@@ -184,7 +205,14 @@ export default function ChatWindow({ currentUser, otherUser, chatId, onBack }: P
 
         <div className="flex flex-col gap-0.5">
           {messages.map((m) => (
-            <MessageBubble key={m.id} message={m} isOwn={m.senderId === currentUser.uid} />
+            <MessageBubble
+              key={m.id}
+              message={m}
+              isOwn={m.senderId === currentUser.uid}
+              otherUserLastReadMs={otherUserLastRead}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
           ))}
         </div>
 

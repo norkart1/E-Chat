@@ -9,6 +9,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   where,
   Timestamp,
   limit,
@@ -26,6 +27,8 @@ export interface Message {
   fileName?: string;
   fileType?: string;
   type: "text" | "file" | "image" | "gif" | "sticker";
+  deleted?: boolean;
+  edited?: boolean;
 }
 
 export interface ChatUser {
@@ -121,7 +124,35 @@ export function subscribeToUserChats(
 }
 
 export async function markChatRead(chatId: string, uid: string) {
-  await setDoc(doc(db, "chats", chatId), { [`read_${uid}`]: true }, { merge: true });
+  await setDoc(doc(db, "chats", chatId), {
+    [`read_${uid}`]: true,
+    [`lastRead_${uid}`]: serverTimestamp(),
+  }, { merge: true });
+}
+
+export function subscribeToChatDoc(
+  chatId: string,
+  callback: (data: Record<string, unknown> | null) => void
+) {
+  return onSnapshot(doc(db, "chats", chatId), (snap) => {
+    callback(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
+  }, () => callback(null));
+}
+
+export async function deleteMessage(chatId: string, messageId: string) {
+  await updateDoc(doc(db, "chats", chatId, "messages", messageId), {
+    deleted: true,
+    text: "",
+    fileURL: null,
+    fileName: null,
+  });
+}
+
+export async function editMessage(chatId: string, messageId: string, newText: string) {
+  await updateDoc(doc(db, "chats", chatId, "messages", messageId), {
+    text: newText,
+    edited: true,
+  });
 }
 
 export async function setTyping(chatId: string, uid: string, isTyping: boolean) {
