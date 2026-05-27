@@ -1,6 +1,5 @@
 "use client";
 import { Message } from "@/lib/firebase/firestore";
-import Avatar from "../ui/Avatar";
 import Image from "next/image";
 
 interface Props {
@@ -19,66 +18,100 @@ function formatTime(ts: { seconds: number } | null) {
 export default function MessageBubble({ message, isOwn }: Props) {
   const isImage = message.type === "image" || message.fileType?.startsWith("image/");
   const isGif = message.type === "gif" || message.type === "sticker";
+  const time = formatTime(message.createdAt as { seconds: number } | null);
 
   return (
-    <div className={`flex gap-2 items-end mb-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-      {!isOwn && (
-        <Avatar src={message.senderPhoto} name={message.senderName} size={32} />
-      )}
-      <div className={`max-w-[70%] ${isOwn ? "items-end" : "items-start"} flex flex-col gap-1`}>
-        {!isOwn && (
-          <span className="text-xs text-gray-500 ml-1">{message.senderName}</span>
-        )}
+    <div className={`flex mb-1 px-2 ${isOwn ? "justify-end" : "justify-start"}`}>
+      <div className={`relative max-w-[72%] ${isOwn ? "" : ""}`}>
+        {/* Bubble */}
         <div
-          className={`rounded-2xl text-sm shadow-sm overflow-hidden ${
+          className={`relative rounded-lg text-sm shadow-sm overflow-hidden ${
             isGif
-              ? "bg-transparent shadow-none p-0"
+              ? "bg-transparent shadow-none"
               : isOwn
-              ? "bg-indigo-600 text-white rounded-br-sm px-4 py-2"
-              : "bg-white text-gray-800 rounded-bl-sm border border-gray-100 px-4 py-2"
+              ? "bg-[#D9FDD3] text-gray-900 rounded-tr-none"
+              : "bg-white text-gray-900 rounded-tl-none"
           }`}
         >
-          {isGif && message.fileURL && (
-            <div className="rounded-2xl overflow-hidden max-w-[200px]">
-              <img
-                src={message.fileURL}
-                alt={message.fileName ?? "GIF"}
-                className="w-full rounded-2xl"
-                loading="lazy"
+          {/* Tail */}
+          {!isGif && (
+            <div
+              className={`absolute top-0 w-2 h-2 overflow-hidden ${
+                isOwn ? "-right-2" : "-left-2"
+              }`}
+            >
+              <div
+                className={`w-4 h-4 ${isOwn ? "bg-[#D9FDD3] -translate-x-2" : "bg-white translate-x-0"}`}
+                style={{
+                  clipPath: isOwn
+                    ? "polygon(0 0, 0% 100%, 100% 0)"
+                    : "polygon(100% 0, 0% 0, 100% 100%)",
+                }}
               />
             </div>
           )}
-          {message.type === "file" && !isImage && (
-            <a
-              href={message.fileURL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-2 underline ${isOwn ? "text-indigo-100" : "text-indigo-600"}`}
-            >
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-              <span className="truncate max-w-[200px]">{message.fileName}</span>
-            </a>
-          )}
-          {isImage && message.fileURL && (
-            <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
-              <Image
+
+          {isGif && message.fileURL && (
+            <div className="rounded-lg overflow-hidden max-w-[200px]">
+              <img
                 src={message.fileURL}
-                alt={message.fileName ?? "image"}
-                width={200}
-                height={200}
-                className="rounded-lg max-w-[200px] max-h-[200px] object-cover"
+                alt={message.fileName ?? "GIF"}
+                className="w-full rounded-lg"
+                loading="lazy"
               />
-            </a>
+              <div className="px-2 pb-1 flex justify-end">
+                <span className="text-[11px] text-white/80 bg-black/30 rounded px-1">{time}</span>
+              </div>
+            </div>
           )}
+
+          {message.type === "file" && !isImage && (
+            <div className="px-3 py-2">
+              <a
+                href={message.fileURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[#008069]"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#008069]/10 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-[#008069]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </div>
+                <span className="truncate max-w-[160px] text-sm">{message.fileName}</span>
+              </a>
+              <div className="flex justify-end mt-1">
+                <span className="text-[11px] text-gray-400">{time}</span>
+              </div>
+            </div>
+          )}
+
+          {isImage && message.fileURL && (
+            <div>
+              <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
+                <Image
+                  src={message.fileURL}
+                  alt={message.fileName ?? "image"}
+                  width={220}
+                  height={220}
+                  className="rounded-lg max-w-[220px] max-h-[220px] object-cover block"
+                />
+              </a>
+              <div className="px-2 pb-1 flex justify-end">
+                <span className="text-[11px] text-gray-400">{time}</span>
+              </div>
+            </div>
+          )}
+
           {message.type === "text" && (
-            <p className="whitespace-pre-wrap break-words">{message.text}</p>
+            <div className="px-3 pt-2 pb-1.5">
+              <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>
+              <div className="flex justify-end mt-0.5">
+                <span className="text-[11px] text-gray-400 ml-3">{time}</span>
+              </div>
+            </div>
           )}
         </div>
-        <span className={`text-xs text-gray-400 ${isOwn ? "text-right" : "text-left"} ml-1`}>
-          {formatTime(message.createdAt as { seconds: number } | null)}
-        </span>
       </div>
     </div>
   );
