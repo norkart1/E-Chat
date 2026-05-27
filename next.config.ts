@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["*.replit.dev", "*.sisko.replit.dev"],
+  allowedDevOrigins: ["*.replit.dev", "*.sisko.replit.dev", "*.pike.replit.dev"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
