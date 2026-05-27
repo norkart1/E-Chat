@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   signInWithGoogle,
   signInWithEmail,
@@ -9,6 +10,7 @@ import {
   sendPhoneOTP,
   verifyPhoneOTP,
 } from "@/lib/firebase/auth";
+import { useAuth } from "@/lib/hooks/useAuth";
 import type { ConfirmationResult, RecaptchaVerifier } from "firebase/auth";
 import Spinner from "@/components/ui/Spinner";
 
@@ -16,6 +18,8 @@ type Tab = "google" | "email" | "phone";
 type EmailMode = "signin" | "signup" | "reset";
 
 export default function AuthPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("google");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,6 +36,10 @@ export default function AuthPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    if (user) router.replace("/chat");
+  }, [user, router]);
 
   useEffect(() => {
     setError("");
