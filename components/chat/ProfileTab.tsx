@@ -100,20 +100,23 @@ export default function ProfileTab({ currentUser, onLogout }: Props) {
 
       {/* Sign out */}
       <div className="bg-white">
-        {!confirmLogout ? (
-          <button
-            onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-[#F5F5F5] transition-colors"
-          >
-            <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <p className="text-[15px] text-red-500 font-medium">Sign out</p>
-          </button>
-        ) : (
-          <div className="px-4 py-4">
-            <p className="text-[15px] text-gray-800 font-medium mb-1">Sign out of E-Chat?</p>
-            <p className="text-[13px] text-gray-400 mb-4">You can sign back in at any time.</p>
+        <button
+          onClick={() => setConfirmLogout(true)}
+          className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-[#F5F5F5] transition-colors"
+        >
+          <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <p className="text-[15px] text-red-500 font-medium">Sign out</p>
+        </button>
+      </div>
+
+      {/* Sign out confirmation modal */}
+      {confirmLogout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+            <p className="text-[17px] text-gray-900 font-semibold mb-1">Sign out of E-Chat?</p>
+            <p className="text-[14px] text-gray-400 mb-6">You can sign back in at any time.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmLogout(false)}
@@ -129,8 +132,8 @@ export default function ProfileTab({ currentUser, onLogout }: Props) {
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
